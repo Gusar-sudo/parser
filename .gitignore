@@ -1,4 +1,4 @@
-parser/
+# виртуальное окружение и кэш
 .venv/
 __pycache__/
 *.pyc
@@ -7,8 +7,10 @@ __pycache__/
 *.jsonl
 *.jsonl.bak
 *.jsonl.tmp
-bmtriz_dataset.jsonl
 .state/
+
+# настройки приложения (локальные)
+.parser_config.json
 
 # но конфиги сайтов (sites/*.json) — полезны, их коммитим
 !sites/*.json

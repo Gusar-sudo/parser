@@ -28,7 +28,6 @@ from wp_scraper import (
     save_state,
 )
 
-DEFAULT_SITE = None  # сайта по умолчанию нет — адрес всегда указывается явно
 SITES_DIR = Path(__file__).parent / "sites"
 
 
@@ -110,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "❌ Укажите адрес сайта.\n"
             "   python parser.py https://example.ru\n"
-            "   или запустите интерактивно:  python start.py",
+            "   или запустите приложение:  python app.py",
             file=sys.stderr,
         )
         return 2
@@ -129,6 +128,9 @@ def main(argv: list[str] | None = None) -> int:
         delay, timeout, retries = args.delay, args.timeout, args.retries
         per_page, user_agent = args.per_page, args.user_agent
         with_taxonomy = not args.no_taxonomy
+
+    # для markdown нужен исходный HTML — иначе останется только plain-текст
+    keep_html = args.keep_html or args.format == "md"
 
     site = WordPressSite(
         url,
@@ -170,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
             since=args.since,
             last_ids=last_ids if args.incremental else None,
             with_taxonomy=with_taxonomy,
+            newest_first=args.incremental,
+            keep_html=keep_html,
         )
 
         if not docs:

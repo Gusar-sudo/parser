@@ -19,7 +19,7 @@ import shutil
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -185,12 +185,14 @@ class WordPressSite:
         retries: int = 3,
         user_agent: str = DEFAULT_UA,
         verbose: bool = True,
+        logger: Callable[[str], None] | None = None,
     ) -> None:
         self.base_url = self._normalize_url(base_url)
         self.delay = delay
         self.timeout = timeout
         self.retries = retries
         self.verbose = verbose
+        self.logger = logger
 
         self.session = requests.Session()
         self.session.headers.update({
@@ -219,7 +221,9 @@ class WordPressSite:
         return f"{parsed.scheme}://{parsed.netloc}{parsed.path.rstrip('/')}"
 
     def _log(self, message: str) -> None:
-        if self.verbose:
+        if self.logger is not None:
+            self.logger(message)
+        elif self.verbose:
             print(message)
 
     def _request(
@@ -371,8 +375,13 @@ class WordPressSite:
         max_items: int | None = None,
         since: str | None = None,
         last_id: int | None = None,
+        newest_first: bool = False,
     ) -> list[dict[str, Any]]:
-        """Скачивает все записи типа post_type (с пагинацией)."""
+        """Скачивает все записи типа post_type (с пагинацией).
+
+        newest_first — идти от свежих к старым. Нужно для инкрементального
+        сбора, чтобы лимит брал самые новые записи, а не самые старые.
+        """
         self.discover()
         types = self.list_types()
         rest_base = types.get(post_type, post_type)
@@ -381,7 +390,7 @@ class WordPressSite:
         params: dict[str, Any] = {"per_page": min(per_page, 100), "_fields": ITEM_FIELDS}
         if since:
             params["after"] = f"{since}T00:00:00"
-        if last_id is not None:
+        if last_id is not None or newest_first:
             # идём от свежих к старым и останавливаемся, дошли до известного
             params["orderby"] = "id"
             params["order"] = "desc"
@@ -466,6 +475,8 @@ class WordPressSite:
         since: str | None = None,
         last_ids: dict[str, int] | None = None,
         with_taxonomy: bool = True,
+        newest_first: bool = False,
+        keep_html: bool = False,
     ) -> list[dict[str, Any]]:
         """Собирает документы со всех указанных типов записей."""
         last_ids = last_ids or {}
@@ -485,10 +496,11 @@ class WordPressSite:
                 max_items=max_items,
                 since=since,
                 last_id=last_ids.get(post_type),
+                newest_first=newest_first,
             )
             self._log(f"   получено: {len(items)}")
             for item in items:
-                doc = extract_document(item, source)
+                doc = extract_document(item, source, keep_html=keep_html)
                 if not doc:
                     continue
                 if with_taxonomy:
@@ -546,7 +558,10 @@ def save_documents(
                         fh.write(f"{key}: {doc[key]}\n")
                 fh.write("---\n\n")
                 fh.write(f"# {doc.get('title', '')}\n\n")
-                fh.write(doc.get("content", "") + "\n\n")
+                # если есть исходный HTML — разворачиваем в markdown с
+                # заголовками, списками и ссылками
+                body = doc.get("content_html")
+                fh.write((html_to_markdown(body) if body else doc.get("content", "")) + "\n\n")
         else:
             raise ScraperError(f"Неизвестный формат: {fmt}")
 
