@@ -1,4 +1,5 @@
 parser/
+.venv/
 __pycache__/
 *.pyc
 bmtriz_dataset.jsonl

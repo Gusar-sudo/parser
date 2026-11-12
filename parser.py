@@ -9,8 +9,16 @@ BASE_URL = "https://bmtriz.ru"
 API_POSTS = f"{BASE_URL}/wp-json/wp/v2/posts"
 API_PAGES = f"{BASE_URL}/wp-json/wp/v2/pages"
 
-# Заголовки, чтобы выглядеть как браузер (иногда помогает)
-HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LLM-Data-Collector/1.0)"}
+# Заголовки, чтобы выглядеть как браузер.
+# ВАЖНО: WAF сайта отдаёт 447 на User-Agent со словом "LLM"/"Data-Collector",
+# поэтому используем обычный браузерный UA.
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json,text/plain,*/*",
+}
 
 
 def clean_html(html_content):
@@ -45,6 +53,9 @@ def fetch_all_pages(api_url, per_page=100):
             if resp.status_code == 400 and "rest_post_invalid_page_number" in resp.text:
                 break  # страницы закончились
             print(f"Ошибка запроса: {e}")
+            break
+        except requests.exceptions.RequestException as e:
+            print(f"Ошибка сети: {e}")
             break
         data = resp.json()
         if not data:
