@@ -2,4 +2,13 @@ parser/
 .venv/
 __pycache__/
 *.pyc
+
+# датасеты и служебные файлы сборки
+*.jsonl
+*.jsonl.bak
+*.jsonl.tmp
 bmtriz_dataset.jsonl
+.state/
+
+# но конфиги сайтов (sites/*.json) — полезны, их коммитим
+!sites/*.json
