@@ -198,36 +198,42 @@ class ScrapeScreen(Screen[Any]):
                     id="scrape-hint",
                 )
 
-            with Grid(classes="form"):
-                with Horizontal(classes="label-row"):
-                    yield Label("Сайт")
-                    yield Button("Проверить", id="btn-check", classes="tiny")
-                yield Input(placeholder="https://example.ru", id="in-url")
-                yield Label("Профиль сайта")
-                yield Select(self._profile_choices, id="in-profile",
-                             allow_blank=True, value="")
+            with Vertical(classes="card"):
+                with Horizontal(classes="full-row"):
+                    yield Label("Сайт", classes="flabel")
+                    with Horizontal(classes="value-row"):
+                        yield Input(placeholder="https://example.ru", id="in-url")
+                        yield Button("Проверить", id="btn-check", classes="tiny")
+                with Horizontal(classes="full-row"):
+                    yield Label("Профиль сайта", classes="flabel")
+                    with Horizontal(classes="value-row"):
+                        yield Select(self._profile_choices, id="in-profile",
+                                     allow_blank=True, value="")
+                with Horizontal(classes="full-row"):
+                    yield Label("Типы записей", classes="flabel")
+                    with Horizontal(classes="value-row"):
+                        yield Input(value=self.cfg["types"], id="in-types")
+                        yield Button("Определить", id="btn-types", classes="tiny")
+                with Horizontal(classes="full-row"):
+                    yield Label("Куда сохранить", classes="flabel")
+                    with Horizontal(classes="value-row"):
+                        yield Input(placeholder="example.ru_dataset.jsonl", id="in-out")
 
-                with Horizontal(classes="label-row"):
-                    yield Label("Типы записей")
-                    yield Button("Определить", id="btn-types", classes="tiny")
-                yield Input(value=self.cfg["types"], id="in-types")
-                yield Label("Куда сохранить")
-                yield Input(placeholder="example.ru_dataset.jsonl", id="in-out")
+                with Grid(classes="form"):
+                    yield Label("Формат")
+                    yield Select(
+                        [("jsonl", "jsonl"), ("json", "json"), ("csv", "csv"), ("md", "md")],
+                        value=self.cfg["format"],
+                        id="in-format",
+                        allow_blank=False,
+                    )
+                    yield Label("Лимит записей")
+                    yield Input(placeholder="пусто = все", id="in-max")
 
-                yield Label("Формат")
-                yield Select(
-                    [("jsonl", "jsonl"), ("json", "json"), ("csv", "csv"), ("md", "md")],
-                    value=self.cfg["format"],
-                    id="in-format",
-                    allow_blank=False,
-                )
-                yield Label("Лимит записей (пусто = все)")
-                yield Input(placeholder="например 100", id="in-max")
-
-                yield Label("Пауза между запросами, сек")
-                yield Input(value=str(self.cfg["delay"]), id="in-delay")
-                yield Label("Таймаут ответа, сек")
-                yield Input(value=str(self.cfg["timeout"]), id="in-timeout")
+                    yield Label("Пауза, сек")
+                    yield Input(value=str(self.cfg["delay"]), id="in-delay")
+                    yield Label("Таймаут, сек")
+                    yield Input(value=str(self.cfg["timeout"]), id="in-timeout")
 
             with Horizontal(classes="row"):
                 yield Checkbox("Разворачивать категории/теги", value=self.cfg["with_taxonomy"], id="in-tax")
@@ -787,22 +793,24 @@ class ParserApp(App[Any]):
     }
     .card Label { color: $text-muted; margin-top: 1; }
     .form {
-        grid-size: 4; grid-rows: 4; grid-gutter: 0 2;
-        height: auto; margin-bottom: 1;
-        border: round $panel; padding: 1 2; background: $panel;
+        grid-size: 4; grid-columns: 17 1fr 17 1fr; grid-rows: 3 3; grid-gutter: 0 2;
+        height: auto; margin-top: 1;
     }
     .form Label { color: $text-muted; content-align: left middle; }
     .form Input, .form Select { margin-bottom: 0; height: 3; }
-    .label-row { height: auto; }
-    .label-row Button { height: 1; min-width: 16; margin-left: 1; }
-    .tiny { height: 1; min-height: 1; border: none; background: $boost; }
+    .full-row { height: 3; }
+    .flabel { width: 17; min-width: 17; color: $text-muted; content-align: left middle; }
+    .value-row { height: 3; width: 1fr; }
+    .value-row Input, .value-row Select { width: 1fr; }
+    .value-row Button { width: 14; min-width: 14; height: 3; margin-left: 1; }
+    .tiny { height: 3; min-height: 3; border: none; background: $boost; }
     .row { height: auto; }
     .col { width: 1fr; margin-right: 2; }
     Input, Select { margin-bottom: 1; height: 3; }
     .actions { height: auto; margin-top: 1; }
     .actions Button { margin-right: 2; }
     #log, #log2, #log3 {
-        height: 12; border: round $panel; background: $panel; margin-top: 1;
+        height: 9; border: round $panel; background: $panel; margin-top: 1;
     }
     #scrape-status, #set-status { height: auto; margin: 1 0; }
     #scrape-status.ok, #set-status.ok { color: $success; }
