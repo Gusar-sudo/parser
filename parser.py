@@ -36,7 +36,7 @@ def clean_html(html_content):
     return text.strip()
 
 
-def fetch_all_pages(api_url, per_page=100):
+def fetch_all_pages(api_url, per_page=100, retries=2):
     """Забирает все объекты с пагинацией."""
     all_items = []
     page = 1
@@ -46,13 +46,28 @@ def fetch_all_pages(api_url, per_page=100):
             "page": page,
             "_fields": "id,date,link,title,content,categories,tags,type,slug",
         }
+        resp = None
         try:
-            resp = requests.get(api_url, headers=HEADERS, params=params, timeout=30)
+            resp = requests.get(api_url, headers=HEADERS, params=params, timeout=(10, 30))
             resp.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            if resp.status_code == 400 and "rest_post_invalid_page_number" in resp.text:
+            if (
+                resp is not None
+                and resp.status_code == 400
+                and "rest_post_invalid_page_number" in resp.text
+            ):
                 break  # страницы закончились
             print(f"Ошибка запроса: {e}")
+            break
+        except requests.exceptions.ConnectionError as e:
+            # Сеть/сайт моргнули — пробуем ещё раз с паузой
+            print(f"  Сеть недоступна ({page}-я страница): {type(e).__name__}")
+            if retries > 0:
+                retries -= 1
+                time.sleep(5)
+                print(f"  Повтор через 5 сек (осталось попыток: {retries})")
+                continue
+            print(f"Ошибка сети: {e}")
             break
         except requests.exceptions.RequestException as e:
             print(f"Ошибка сети: {e}")
@@ -103,6 +118,16 @@ def main():
         doc = extract_document(item)
         if doc:
             documents.append(doc)
+
+    # Если сайт не отдал ни одного документа — не создаём пустой файл,
+    # а честно падаем с ненулевым кодом возврата.
+    if not documents:
+        print(
+            "\n❌ Не удалось получить ни одного документа.\n"
+            "   Сайт bmtriz.ru недоступен или отвечает ошибкой — проверь:\n"
+            "   curl -I https://bmtriz.ru/wp-json/wp/v2/posts"
+        )
+        raise SystemExit(1)
 
     # Сохраняем в JSONL
     output_file = "bmtriz_dataset.jsonl"
